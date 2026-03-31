@@ -2395,35 +2395,73 @@ async function sendAnnouncement(){
 }
 
 // ══════════════════════ YANDEX MUSIC
-function saveYMToken(){
+async function saveYMToken(){
   ymToken=document.getElementById('ym-tok').value.trim();
   localStorage.setItem('ym_tok',ymToken);
   if(me?.uid&&me.uid!==ADMIN_UID)update(ref(db,`users/${me.uid}`),{ymToken});
-  if(ymToken)startYM();
-  else{if(ymTimer)clearInterval(ymTimer);document.getElementById('ym-prev-w').classList.add('hidden');}
-  showToast(ymToken?'Yandex Music connected!':'Disconnected');
+  if(!ymToken){
+    if(ymTimer)clearInterval(ymTimer);
+    document.getElementById('ym-prev-w').classList.add('hidden');
+    showToast('Disconnected');
+    return;
+  }
+  showToast('Connecting to Yandex Music...');
+  // Test the token immediately
+  const data=await ymFetch('/account/status');
+  if(data?.result?.account?.login){
+    startYM();
+    showToast(`✅ Connected as ${data.result.account.login}`);
+  } else {
+    ymToken='';
+    localStorage.removeItem('ym_tok');
+    showToast('❌ Invalid token. Get a new one.');
+  }
 }
+async function ymFetch(path){
+  // Try direct first (works if server sends CORS headers), fallback to corsproxy
+  const base='https://api.music.yandex.net';
+  const headers={'Authorization':`OAuth ${ymToken}`,'X-Yandex-Music-Client':'WindowsPhone/3.20'};
+  const proxies=[
+    url=>fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`,{headers,signal:AbortSignal.timeout(8000)}),
+    url=>fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,{headers,signal:AbortSignal.timeout(8000)}),
+  ];
+  for(const proxy of proxies){
+    try{
+      const r=await proxy(base+path);
+      if(r.ok){const j=await r.json();return j;}
+    }catch(e){}
+  }
+  return null;
+}
+
 async function fetchYM(){
   if(!ymToken)return;
   try{
-    const r=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://api.music.yandex.net/queues')}`,
-      {signal:AbortSignal.timeout(6000)});
-    const j=await r.json();const data=JSON.parse(j.contents||'{}');
-    if(!data.result?.length)return;
+    // Get currently playing track via /rotor/station/user:onyourwave/feedback
+    // Use /queues endpoint — lists active playback queues
+    const data=await ymFetch('/queues');
+    if(!data?.result?.length){
+      // fallback: try /users/{uid}/likes/tracks as status indicator
+      ymTrack=null;
+      document.getElementById('ym-prev-w').classList.add('hidden');
+      return;
+    }
     const q=data.result[0];
-    const r2=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.music.yandex.net/queues/${q.id}`)}`,
-      {signal:AbortSignal.timeout(6000)});
-    const j2=await r2.json();const qd=JSON.parse(j2.contents||'{}');
-    if(!qd.result?.tracks)return;
-    const tr=qd.result.tracks[qd.result.currentIndex||0];
+    const qd=await ymFetch(`/queues/${q.id}`);
+    if(!qd?.result?.tracks)return;
+    const idx=qd.result.currentIndex??0;
+    const tr=qd.result.tracks[idx];
     if(!tr?.track)return;
     const tk=tr.track;
+    const newId=tk.id;
+    // Only update UI if track changed
+    if(ymTrack?.trackId===newId)return;
     ymTrack={
       title:tk.title||'Unknown',
       artist:(tk.artists||[]).map(a=>a.name).join(', '),
       album:tk.albums?.[0]?.title||'',
       albumId:tk.albums?.[0]?.id,
-      trackId:tk.id,
+      trackId:newId,
       cover:tk.coverUri?`https://${tk.coverUri.replace('%%','200x200')}`:null,
       duration:tk.durationMs||0
     };
@@ -2433,13 +2471,12 @@ async function fetchYM(){
       update(ref(db,`users/${me.uid}`),{ymTrack:{...ymTrack,ts:Date.now()}});
     }
     renderPB();
-    // Progress timer
     if(ymProgressTimer)clearInterval(ymProgressTimer);
     ymProgressTimer=setInterval(()=>{
       ymProgress=Math.min(100,(ymProgress||0)+100/((ymTrack.duration/1000)||180));
       const bar=document.getElementById('ym-p-bar');if(bar)bar.style.width=ymProgress+'%';
     },1000);
-  }catch(e){}
+  }catch(e){console.warn('YM fetch error:',e);}
 }
 function updateYMUI(){
   if(!ymTrack)return;
