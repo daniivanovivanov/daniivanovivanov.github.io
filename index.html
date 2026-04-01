@@ -1273,29 +1273,42 @@ async function uploadToCloudinary(file,publicIdPrefix){
 // ═══════════════════════════════ PRESENCE
 function setupPresence(){
   if(!me||me.uid===ADMIN_UID)return;
+
   presRef=ref(db,`presence/${me.uid}`);
-  set(presRef,{online:true,name:me.name,ts:Date.now()});
-  // Listen offline
+
+  // Marcar online
+  set(presRef,{
+    online:true,
+    name:me.name,
+    ts:Date.now()
+  });
+
+  // Al cerrar
   window.addEventListener('beforeunload',()=>{
     if(presRef)set(presRef,{online:false,ts:Date.now()});
   });
-  document.addEventListener('visibilitychange',()=>{
-    if(presRef)update(presRef,{online:!document.hidden,ts:Date.now()});
-  });
+
+  // Heartbeat
+  setInterval(()=>{
+    if(presRef)update(presRef,{ts:Date.now()});
+  },25000);
+
+  // Lectura con expiración
   onValue(ref(db,'presence'),snap=>{
     onlineUIDs.clear();
-    if(snap.exists())Object.entries(snap.val()).forEach(([uid,d])=>{if(d.online)onlineUIDs.add(uid);});
-    renderSidebarList();updateActiveChatStatus();
+    if(!snap.exists())return;
+
+    const now=Date.now();
+
+    Object.entries(snap.val()).forEach(([uid,d])=>{
+      if(d.online && (now - d.ts) < 60000){
+        onlineUIDs.add(uid);
+      }
+    });
+
+    renderSidebarList();
+    updateActiveChatStatus();
   });
-  setInterval(()=>{if(presRef&&!document.hidden)update(presRef,{ts:Date.now()});},25000);
-}
-function updateActiveChatStatus(){
-  if(!activeConv||activeConv.startsWith('g_'))return;
-  const dmId=activeConv.startsWith('dm_')?activeConv.slice(3):null;
-  if(!dmId)return;
-  const otherUid=dmId.split('_').find(u=>u!==me.uid);
-  const isOnline=onlineUIDs.has(otherUid);
-  document.getElementById('ch-status').textContent=isOnline?t('online'):t('offline');
 }
 
 // ═══════════════════════════════ USERS
