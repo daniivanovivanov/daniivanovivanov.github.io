@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Video Slider</title>
 
 <!-- Swiper CSS -->
@@ -23,29 +22,22 @@ body {
   padding: 0 20px;
 }
 
-/* CONTENEDOR VIDEO (CLAVE) */
+/* Slider */
 .video-slide-container {
   position: relative;
   cursor: pointer;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 16 / 9; /* Mantiene proporción del video */
   overflow: hidden;
   border-radius: 12px;
-  background: #000;
 }
 
-/* Imagen preview */
 .video-preview-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-/* Iframe */
-.video-slide-container iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
+  display: block;
+  border-radius: 12px;
 }
 
 /* Botón play */
@@ -57,6 +49,7 @@ body {
   font-size: 60px;
   color: white;
   opacity: 0.9;
+  pointer-events: none;
 }
 
 /* Flechas */
@@ -70,7 +63,6 @@ body {
 <body>
 
 <div class="container">
-
   <h2>Video Slider</h2>
 
   <div class="swiper swiper-video">
@@ -78,8 +70,9 @@ body {
 
       <!-- VIDEO 1 -->
       <div class="swiper-slide video-slide-container"
-        data-iframe='<iframe src="https://www.youtube.com/embed/PwaYXrZ1UGc?enablejsapi=1&autoplay=1"></iframe>'>
-
+        data-iframe='<iframe width="100%" height="100%" 
+        src="https://www.youtube.com/embed/PwaYXrZ1UGc?enablejsapi=1" 
+        frameborder="0" allow="fullscreen; autoplay; encrypted-media" allowfullscreen></iframe>'>
         <img src="https://img.youtube.com/vi/PwaYXrZ1UGc/hqdefault.jpg"
              class="video-preview-image">
         <div class="play-button-overlay">▶</div>
@@ -87,8 +80,9 @@ body {
 
       <!-- VIDEO 2 -->
       <div class="swiper-slide video-slide-container"
-        data-iframe='<iframe src="https://www.youtube.com/embed/z0rwAWz7K0o?enablejsapi=1&autoplay=1"></iframe>'>
-
+        data-iframe='<iframe width="100%" height="100%" 
+        src="https://www.youtube.com/embed/z0rwAWz7K0o?enablejsapi=1" 
+        frameborder="0" allow="fullscreen; autoplay; encrypted-media" allowfullscreen></iframe>'>
         <img src="https://img.youtube.com/vi/z0rwAWz7K0o/hqdefault.jpg"
              class="video-preview-image">
         <div class="play-button-overlay">▶</div>
@@ -96,8 +90,9 @@ body {
 
       <!-- VIDEO 3 -->
       <div class="swiper-slide video-slide-container"
-        data-iframe='<iframe src="https://www.youtube.com/embed/KNYy8vah6vI?enablejsapi=1&autoplay=1"></iframe>'>
-
+        data-iframe='<iframe width="100%" height="100%" 
+        src="https://www.youtube.com/embed/KNYy8vah6vI?enablejsapi=1" 
+        frameborder="0" allow="fullscreen; autoplay; encrypted-media" allowfullscreen></iframe>'>
         <img src="https://img.youtube.com/vi/KNYy8vah6vI/hqdefault.jpg"
              class="video-preview-image">
         <div class="play-button-overlay">▶</div>
@@ -109,14 +104,13 @@ body {
     <div class="swiper-button-prev swiper-button-prev-video"></div>
     <div class="swiper-button-next swiper-button-next-video"></div>
   </div>
-
 </div>
 
 <!-- Swiper JS -->
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
 <script>
-// Slider
+// Inicializar slider
 const videoSwiper = new Swiper('.swiper-video', {
     loop: false,
     slidesPerView: 1,
@@ -140,7 +134,7 @@ const videoSwiper = new Swiper('.swiper-video', {
     }
 });
 
-// Click → cargar video
+// Click para cargar video
 document.querySelectorAll('.video-slide-container').forEach(slide => {
     slide.addEventListener('click', function () {
         if (!this.querySelector('iframe')) {
