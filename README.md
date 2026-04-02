@@ -1,2 +1,2 @@
-# daniivanovivanov.github.io
-Nexa
+# nexa.github.io
+Nexa Messenger
